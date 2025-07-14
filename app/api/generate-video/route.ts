@@ -51,6 +51,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (
+      !imageUrls.every((url) => typeof url === "string" && url.trim() !== "")
+    ) {
+      return NextResponse.json(
+        { error: "Semua imageUrls harus diisi dan valid." },
+        { status: 400 }
+      );
+    }
+
     const videoId = uuidv4();
     const outputPath = path.join(
       process.cwd(),
