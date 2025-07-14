@@ -52,14 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const videoId = uuidv4();
-    const outputPath = path.join(
-      process.cwd(),
-      "public",
-      "videos",
-      `${videoId}.mp4`
-    );
-    const tempDir = path.join(process.cwd(), "temp", videoId);
-    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    const tempDir = path.join("/tmp", videoId);
     await fs.mkdir(tempDir, { recursive: true });
 
     // Download images and audio
@@ -80,26 +73,26 @@ export async function POST(request: NextRequest) {
     const gridW = 1000,
       gridH = 1000;
     const imgW = 460,
-      imgH = 460; // margin antar gambar 40px
+      imgH = 460;
     const marginX = 40,
-      marginY = 100; // marginY diperbesar dari 40 ke 100
+      marginY = 100;
     const gridStartX = 40,
       gridStartY = 200;
     const capH = 60;
+    // Use Arial (system font)
+    const font = "/System/Library/Fonts/Arial.ttf";
 
-    // Get system font (no path issues)
-    const font = getSystemFont();
-
-    // Buat video fade-in untuk tiap gambar+caption dengan durasi 0.6 detik
+    // Buat video fade-in untuk tiap gambar+caption (fade-in bareng)
     const fadeIns: string[] = [];
     for (let i = 0; i < 4; i++) {
       const fadePath = path.join(tempDir, `fade${i + 1}.mp4`);
       const cap = captions[i].replace(/'/g, "\\'");
+      // Fade-in gambar dan caption bareng, caption ada shadow tipis
       const cmd = `"${process.env.FFMPEG_PATH || "ffmpeg"}" -y -loop 1 -i "${
         imagePaths[i]
       }" -f lavfi -t 7 -i color=white:s=${imgW}x${
         imgH + capH
-      } -filter_complex "[1:v][0:v]overlay=0:${capH},drawtext=fontfile=${font}:text='${cap}':fontsize=36:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=10,fade=t=in:st=${
+      } -filter_complex "[1:v][0:v]overlay=0:${capH},drawtext=fontfile='${font}':text='${cap}':fontsize=36:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=10,fade=t=in:st=${
         i * 0.2
       }:d=0.5:alpha=1,format=yuva420p" -t 7 -pix_fmt yuv420p -c:v libx264 "${fadePath}"`;
       await execAsync(cmd);
@@ -107,8 +100,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Gabungkan 4 fade-in ke grid 2x2
-    // Posisi: 0,0 | 1,0 | 0,1 | 1,1
-    // X: gridStartX + (col * (imgW+marginX)), Y: gridStartY + (row * (imgH+marginY))
     const filterGrid = `
       [0:v][1:v]overlay=${gridStartX}:${gridStartY}[tmp1];
       [tmp1][2:v]overlay=${gridStartX + imgW + marginX}:${gridStartY}[tmp2];
@@ -116,36 +107,65 @@ export async function POST(request: NextRequest) {
       [tmp3][4:v]overlay=${gridStartX + imgW + marginX}:${
       gridStartY + imgH + marginY
     }[withgrid];
-      [withgrid]drawtext=fontfile=${font}:text='${title.replace(
+      [withgrid]drawtext=fontfile='${font}':text='${title.replace(
       /'/g,
       "\\'"
     )}':fontsize=60:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=80[final]
     `.replace(/\n/g, "");
 
     // Buat video grid
+    const outputPath = path.join(tempDir, "video.mp4");
     const gridCmd = `"${
       process.env.FFMPEG_PATH || "ffmpeg"
     }" -y -f lavfi -i color=white:s=1080x1920:d=7 -i "${fadeIns[0]}" -i "${
       fadeIns[1]
     }" -i "${fadeIns[2]}" -i "${
       fadeIns[3]
-    }" -filter_complex "${filterGrid}" -map "[final]" -t 7 -r 30 -pix_fmt yuv420p -c:v libx264 "${tempDir}/video.mp4"`;
+    }" -filter_complex "${filterGrid}" -map "[final]" -t 7 -r 30 -pix_fmt yuv420p -c:v libx264 "${outputPath}"`;
     await execAsync(gridCmd);
 
     // Add audio
+    const finalPath = path.join(tempDir, "final.mp4");
     const finalCmd = `"${
       process.env.FFMPEG_PATH || "ffmpeg"
-    }" -y -i "${tempDir}/video.mp4" -i "${audioPath}" -c:v copy -c:a aac -shortest "${outputPath}"`;
+    }" -y -i "${outputPath}" -i "${audioPath}" -c:v copy -c:a aac -shortest "${finalPath}"`;
     await execAsync(finalCmd);
+
+    // Upload ke tmpfiles.org
+    const fileBuffer = await fs.readFile(finalPath);
+    const blob = new Blob([fileBuffer], { type: "video/mp4" });
+    const form = new FormData();
+    form.append("file", blob, "video.mp4");
+    const uploadRes = await fetch("https://tmpfiles.org/api/v1/upload", {
+      method: "POST",
+      body: form,
+    });
+    const uploadJson = await uploadRes.json();
+    let videoUrl = uploadJson?.data?.url || null;
+
+    // Convert to direct download link if possible
+    if (videoUrl && videoUrl.includes("tmpfiles.org/")) {
+      // Extract ID from url (e.g. https://tmpfiles.org/5827775/video.mp4 or https://tmpfiles.org/5827775)
+      const match = videoUrl.match(/tmpfiles.org\/(\d+)/);
+      if (match && match[1]) {
+        videoUrl = `https://tmpfiles.org/dl/${match[1]}/video.mp4`;
+      }
+    }
 
     await fs.rm(tempDir, { recursive: true, force: true });
 
-    const videoUrl = `/videos/${videoId}.mp4`;
+    if (!videoUrl) {
+      return NextResponse.json(
+        { error: "Failed to upload video" },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       videoUrl,
       videoId,
-      message: "Video generated successfully",
+      message: "Video generated and uploaded successfully",
     });
   } catch (error: any) {
     console.error("Error generating video:", error);
