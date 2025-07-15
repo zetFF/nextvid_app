@@ -16,23 +16,6 @@ function escapeFfmpegText(text: string) {
     .replace(/"/g, '\\"');
 }
 
-// Fungsi untuk membungkus text menjadi beberapa baris (untuk ffmpeg drawtext)
-function wrapText(text: string, maxLen: number) {
-  const words = text.split(" ");
-  let lines: string[] = [];
-  let current = "";
-  for (const word of words) {
-    if ((current + " " + word).trim().length > maxLen) {
-      lines.push(current.trim());
-      current = word;
-    } else {
-      current += " " + word;
-    }
-  }
-  if (current) lines.push(current.trim());
-  return lines.join("\\n");
-}
-
 // Fungsi untuk path font sesuai OS (Armbian/Linux pakai DejaVuSans.ttf)
 function getSystemFontPath() {
   const platform = process.platform;
@@ -100,52 +83,13 @@ export async function POST(request: NextRequest) {
     // Download images and audio
     const imagePaths: string[] = [];
     for (let i = 0; i < 4; i++) {
-      let imgRes;
-      try {
-        imgRes = await fetch(imageUrls[i]);
-      } catch (err: any) {
-        console.error(`Gagal mengunduh gambar ke-${i + 1}:`, err);
-        return NextResponse.json(
-          { error: `Gagal mengunduh gambar ke-${i + 1}: ${err.message}` },
-          { status: 400 }
-        );
-      }
-      if (!imgRes.ok) {
-        console.error(
-          `Gambar ke-${i + 1} tidak bisa diakses (status ${imgRes.status})`
-        );
-        return NextResponse.json(
-          {
-            error: `Gambar ke-${i + 1} tidak bisa diakses (status ${
-              imgRes.status
-            })`,
-          },
-          { status: 400 }
-        );
-      }
+      const imgRes = await fetch(imageUrls[i]);
       const imgBuf = await imgRes.arrayBuffer();
       const imgPath = path.join(tempDir, `img${i + 1}.jpg`);
       await fs.writeFile(imgPath, Buffer.from(imgBuf));
       imagePaths.push(imgPath);
     }
-    // Download audio
-    let audioRes;
-    try {
-      audioRes = await fetch(musicUrl);
-    } catch (err: any) {
-      console.error("Gagal mengunduh audio:", err);
-      return NextResponse.json(
-        { error: `Gagal mengunduh audio: ${err.message}` },
-        { status: 400 }
-      );
-    }
-    if (!audioRes.ok) {
-      console.error(`Audio tidak bisa diakses (status ${audioRes.status})`);
-      return NextResponse.json(
-        { error: `Audio tidak bisa diakses (status ${audioRes.status})` },
-        { status: 400 }
-      );
-    }
+    const audioRes = await fetch(musicUrl);
     const audioBuf = await audioRes.arrayBuffer();
     const audioPath = path.join(tempDir, `audio.mp3`);
     await fs.writeFile(audioPath, Buffer.from(audioBuf));
@@ -154,14 +98,21 @@ export async function POST(request: NextRequest) {
     const gridW = 1000,
       gridH = 1000;
     const imgW = 460,
-      imgH = 460;
+      imgH = 460; // margin antar gambar 40px
     const marginX = 40,
-      marginY = 100;
-    const gridStartX = 40,
-      gridStartY = 320; // Turunkan grid agar tidak tabrakan dengan title
-    const capH = 90; // Tinggi caption diperbesar agar muat wrapping
-    const titleMaxWidth = 900;
-    const captionMaxWidth = 400;
+      marginY = 100; // marginY diperbesar dari 40 ke 100
+    const capH = 60;
+
+    // Estimasi jumlah baris judul (anggap 1 baris = 20 karakter, font besar)
+    const maxCharsPerLine = 20;
+    const titleLines = Math.ceil(title.length / maxCharsPerLine);
+    const titleFontSize = 60;
+    const titleLineHeight = 70; // px, sedikit lebih besar dari fontSize
+    const titleBoxPadding = 20; // px, padding atas bawah box judul
+    const titleBoxHeight = titleLines * titleLineHeight + 2 * titleBoxPadding;
+    const gridStartX = 40;
+    // gridStartY di bawah judul
+    const gridStartY = 40 + titleBoxHeight + 20; // 40px margin atas, 20px jarak bawah judul ke grid
 
     // Get system font (no path issues)
     const font = getSystemFontPath();
@@ -170,13 +121,12 @@ export async function POST(request: NextRequest) {
     const fadeIns: string[] = [];
     for (let i = 0; i < 4; i++) {
       const fadePath = path.join(tempDir, `fade${i + 1}.mp4`);
-      const capWrapped = wrapText(captions[i], 22); // 22 karakter per baris
-      const cap = escapeFfmpegText(capWrapped);
+      const cap = escapeFfmpegText(captions[i]);
       const cmd = `"${process.env.FFMPEG_PATH || "ffmpeg"}" -y -loop 1 -i "${
         imagePaths[i]
       }" -f lavfi -t 7 -i color=white:s=${imgW}x${
         imgH + capH
-      } -filter_complex "[1:v][0:v]overlay=0:${capH},drawtext=fontfile='${font}':text='${cap}':fontsize=36:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-${captionMaxWidth})/2:y=10:box=1:boxcolor=white@0.0:boxborderw=10,fade=t=in:st=${
+      } -filter_complex "[1:v][0:v]overlay=0:${capH},drawtext=fontfile='${font}':text='${cap}':fontsize=36:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=10,fade=t=in:st=${
         i * 0.2
       }:d=0.5:alpha=1,format=yuva420p" -t 7 -pix_fmt yuv420p -c:v libx264 "${fadePath}"`;
       await execAsync(cmd, { maxBuffer: 1024 * 1024 * 10 });
@@ -186,8 +136,7 @@ export async function POST(request: NextRequest) {
     // Gabungkan 4 fade-in ke grid 2x2
     // Posisi: 0,0 | 1,0 | 0,1 | 1,1
     // X: gridStartX + (col * (imgW+marginX)), Y: gridStartY + (row * (imgH+marginY))
-    const gridTitleWrapped = wrapText(title, 32); // 32 karakter per baris
-    const gridTitle = escapeFfmpegText(gridTitleWrapped);
+    const gridTitle = escapeFfmpegText(title);
     const filterGrid = `
       [0:v][1:v]overlay=${gridStartX}:${gridStartY}[tmp1];
       [tmp1][2:v]overlay=${gridStartX + imgW + marginX}:${gridStartY}[tmp2];
@@ -195,7 +144,7 @@ export async function POST(request: NextRequest) {
       [tmp3][4:v]overlay=${gridStartX + imgW + marginX}:${
       gridStartY + imgH + marginY
     }[withgrid];
-      [withgrid]drawtext=fontfile='${font}':text='${gridTitle}':fontsize=60:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-${titleMaxWidth})/2:y=80:box=1:boxcolor=white@0.0:boxborderw=20[final]
+      [withgrid]drawtext=fontfile='${font}':text='${gridTitle}':fontsize=${titleFontSize}:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=40:box=1:boxcolor=white@0.8:boxborderw=20:wrap=1:max_glyphs=${maxCharsPerLine}[final]
     `.replace(/\n/g, "");
 
     // Buat video grid
