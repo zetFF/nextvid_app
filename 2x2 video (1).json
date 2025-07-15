@@ -1,0 +1,604 @@
+{
+  "name": "2x2 video",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Trigger and Get our Image and text/data\n",
+        "height": 560,
+        "width": 820
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2360,
+        20
+      ],
+      "id": "750891e0-fee0-4025-97ba-feb847675907",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2300,
+        100
+      ],
+      "id": "29044e5d-ba1e-4f79-a787-8a9a6ca20e21",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a viral content creator specializing in creating engaging 2x2 grid photos that platform well on social media. Your task is to create content based on a given topic that follows the popular viral format.\n\nTopic: \"Rich and luxury intinya aku ada saas manyhook.com BUAT AGAR ORANG TERTARIK, CEK RESPONSE SEBELUMNYA PASTIKAN UNIQUE YAA\"\n\nCreate a JSON response with the following structure:\n\n{\n  \"Caption\": \"[Engaging hook that creates curiosity and relatability]\",\n  \"items\": [\n    {\n      \"label\": \"[Short 1-3 word description]\",\n      \"image_prompt\":\"[Detailed Pexels search query for high-quality stock photo]\"\n    },\n    {\n      \"label\": \"[Short 1-3 word description]\",\n      \"image_prompt\":\"[Detailed Pexels search query for high-quality stock photo]\"\n    },\n    {\n      \"label\": \"[Short 1-3 word description]\",\n      \"image_prompt\":\"[Detailed Pexels search query for high-quality stock photo]\"\n    },\n    {\n      \"label\": \"[Short 1-3 word description]\",\n      \"image_prompt\":\"[Detailed Pexels search query for high-quality stock photo]\"\n    }\n  ]\n}\n\nMake sure the content is engaging and follows viral social media trends.\n\n\n\n",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -2020,
+        100
+      ],
+      "id": "978b142a-896c-4293-910f-07bafae38a9f",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -1920,
+        360
+      ],
+      "id": "6974fc74-635b-43c5-958d-82f3e4ea4f7f",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "RLZpDhAIDTUVrh1c",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"Caption\": \"[Engaging hook that creates curiosity and relatability]\",\n  \"items\": [\n    {\n      \"label\": \"[Short 1-3 word description]\",\n      \"image_prompt\":\"[Detailed Pexels search query for high-quality stock photo]\"\n    },\n    {\n      \"label\": \"[Short 1-3 word description]\",\n      \"image_prompt\":\"[Detailed Pexels search query for high-quality stock photo]\"\n    },\n    {\n      \"label\": \"[Short 1-3 word description]\",\n      \"image_prompt\":\"[Detailed Pexels search query for high-quality stock photo]\"\n    },\n    {\n      \"label\": \"[Short 1-3 word description]\",\n      \"image_prompt\":\"[Detailed Pexels search query for high-quality stock photo]\"\n    }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1760,
+        360
+      ],
+      "id": "b3051b6a-53f9-4325-bd8b-ad4953ad606d",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "content": "## Pexels Image Processing",
+        "height": 260,
+        "width": 720
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1480,
+        20
+      ],
+      "id": "43e4f62f-cce0-45d2-b6d2-3dd0e66960d3",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -1400,
+        100
+      ],
+      "id": "db276799-dd53-469b-8dba-385d24bb8bd6",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "url": "https://api.pexels.com/v1/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.image_prompt }}"
+            },
+            {
+              "name": "per_page",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1180,
+        100
+      ],
+      "id": "de9fbb59-662a-4d6d-9a8e-2eba18797ae2",
+      "name": "Get Pexels image",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "0OhFRyybcmU2Dr7u",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.photos[0].src.landscape }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -960,
+        100
+      ],
+      "id": "b5511a82-b2dd-40f8-8c88-ffdeaf8830be",
+      "name": "Download Image"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "512a4eb7-cc11-41a2-982e-cb5426a82795",
+              "name": "label",
+              "value": "={{ $('Split Out').item.json.label }}",
+              "type": "string"
+            },
+            {
+              "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+              "name": "image_url",
+              "value": "={{ $('Get Pexels image').item.json.photos[0].src.landscape }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -640,
+        100
+      ],
+      "id": "40c0d867-af7a-4bfd-86f5-ecc47f889e5d",
+      "name": "Format Item Data"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -400,
+        100
+      ],
+      "id": "d6229d86-092e-4a5f-b758-896c54f9ff32",
+      "name": "Merge All Items"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "final-output-id",
+              "name": "Caption",
+              "value": "={{ $('Basic LLM Chain').item.json.output.Caption }}",
+              "type": "string"
+            },
+            {
+              "id": "final-items-id",
+              "name": "items",
+              "value": "={{ $input.all().map(item => item.json) }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -220,
+        100
+      ],
+      "id": "60390181-2b0a-4a59-a700-74e015233aa3",
+      "name": "Final Output"
+    },
+    {
+      "parameters": {
+        "content": "## Audio & Video Generation",
+        "height": 460,
+        "width": 1020
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f5888885-055e-48d8-a4c3-74fa5a3358b9",
+      "name": "Audio Video Note"
+    },
+    {
+      "parameters": {
+        "url": "https://freesound.org/apiv2/search/text/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "luxury music"
+            },
+            {
+              "name": "token",
+              "value": "9ObtHsauqJca4rQ6XJ85jFwrZR7RZi331LTt5bNB"
+            },
+            {
+              "name": "filter",
+              "value": "duration:[10.0 TO 30.0]"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "fields",
+              "value": "id,name,previews,duration"
+            },
+            {
+              "name": "page_size",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        120,
+        100
+      ],
+      "id": "233ee10b-2630-47ad-a7de-6c61b5aaf98e",
+      "name": "Get Freesound Audio"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.results[0].previews['preview-lq-mp3'] }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        100
+      ],
+      "id": "e0505766-905a-46fc-beaa-479f307735a9",
+      "name": "Download Freesound Audio"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "video-data-id",
+              "name": "musicUrl",
+              "value": "={{ $('Get Freesound Audio').item.json.results[0].previews['preview-lq-mp3'] }}",
+              "type": "string"
+            },
+            {
+              "id": "video-title-id",
+              "name": "title",
+              "value": "={{ $('Final Output').item.json.Caption }}",
+              "type": "string"
+            },
+            {
+              "id": "video-captions-id",
+              "name": "captions",
+              "value": "={{ $('Final Output').item.json.items.map(item => item.label) }}",
+              "type": "array"
+            },
+            {
+              "id": "video-images-id",
+              "name": "imageUrls",
+              "value": "={{ $('Final Output').item.json.items.map(item => item.image_url) }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        600,
+        100
+      ],
+      "id": "f272fedc-0d30-494d-bd18-645141e3c1c3",
+      "name": "Prepare Video Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.1.3:3000/api/generate-video",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"{{ $json.title }}\",\n  \"captions\": [\n    \"{{ $json.captions[0] }}\",\n    \"{{ $json.captions[1] }}\",\n    \"{{ $json.captions[2] }}\",\n    \"{{ $json.captions[3] }}\"\n  ],\n  \"imageUrls\": [\n    \"{{ $json.imageUrls[0] }}\",\n    \"{{ $json.imageUrls[1] }}\",\n    \"{{ $json.imageUrls[2] }}\",\n    \"{{ $json.imageUrls[3] }}\"\n  ],\n  \"musicUrl\": \"{{ $json.musicUrl }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 600000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        840,
+        100
+      ],
+      "id": "f902f6ee-c7cd-46f2-8188-66c8c9031a42",
+      "name": "Generate Video"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "final-video-id",
+              "name": "videoUrl",
+              "value": "={{ $json.videoUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "final-video-id-uuid",
+              "name": "videoId",
+              "value": "={{ $json.videoId }}",
+              "type": "string"
+            },
+            {
+              "id": "final-success",
+              "name": "success",
+              "value": "={{ $json.success }}",
+              "type": "boolean"
+            },
+            {
+              "id": "final-message",
+              "name": "message",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1080,
+        100
+      ],
+      "id": "85eccc2e-bbfa-4c7c-8a7a-2c8973817d02",
+      "name": "Final Video Output"
+    },
+    {
+      "parameters": {
+        "content": "## Video Generation Complete\n\nThe workflow now generates a 2x2 grid video with:\n- Auto-generated captions\n- Pexels images \n- Freesound audio\n- Final video output",
+        "height": 260,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        20
+      ],
+      "id": "c025363a-ee0f-4866-ac9c-25a1c28bb2e7",
+      "name": "Completion Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Get Pexels image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pexels image": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Format Item Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Item Data": {
+      "main": [
+        [
+          {
+            "node": "Merge All Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Items": {
+      "main": [
+        [
+          {
+            "node": "Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Output": {
+      "main": [
+        [
+          {
+            "node": "Get Freesound Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Freesound Audio": {
+      "main": [
+        [
+          {
+            "node": "Download Freesound Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Freesound Audio": {
+      "main": [
+        [
+          {
+            "node": "Prepare Video Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Video Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video": {
+      "main": [
+        [
+          {
+            "node": "Final Video Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a01e2f10-f18f-4bfe-8893-14b95508a2d8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "08d5a3441e01f03cdd3077b9b91c58e09b66bb16396988a2114deddbd2118fd6"
+  },
+  "id": "m5ReDJLSpBfHw6tD",
+  "tags": []
+}
