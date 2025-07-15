@@ -7,16 +7,25 @@ import { v4 as uuidv4 } from "uuid";
 
 const execAsync = promisify(exec);
 
-// Function to get appropriate font for different OS
-function getSystemFont() {
-  const platform = process.platform;
+// Helper untuk escape karakter khusus pada text ffmpeg
+function escapeFfmpegText(text: string) {
+  return text
+    .replace(/\\/g, "\\\\")
+    .replace(/:/g, "\\:")
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"');
+}
 
+// Fungsi untuk path font sesuai OS (Armbian/Linux pakai DejaVuSans.ttf)
+function getSystemFontPath() {
+  const platform = process.platform;
   if (platform === "win32") {
-    return "arial"; // Use built-in font name for Windows
+    return "C:/Windows/Fonts/arial.ttf";
   } else if (platform === "darwin") {
-    return "Arial"; // macOS
+    return "/Library/Fonts/Arial.ttf";
   } else {
-    return "DejaVu Sans"; // Linux
+    // Linux/Armbian
+    return "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
   }
 }
 
@@ -97,27 +106,28 @@ export async function POST(request: NextRequest) {
     const capH = 60;
 
     // Get system font (no path issues)
-    const font = getSystemFont();
+    const font = getSystemFontPath();
 
     // Buat video fade-in untuk tiap gambar+caption dengan durasi 0.6 detik
     const fadeIns: string[] = [];
     for (let i = 0; i < 4; i++) {
       const fadePath = path.join(tempDir, `fade${i + 1}.mp4`);
-      const cap = captions[i].replace(/'/g, "\\'");
+      const cap = escapeFfmpegText(captions[i]);
       const cmd = `"${process.env.FFMPEG_PATH || "ffmpeg"}" -y -loop 1 -i "${
         imagePaths[i]
       }" -f lavfi -t 7 -i color=white:s=${imgW}x${
         imgH + capH
-      } -filter_complex "[1:v][0:v]overlay=0:${capH},drawtext=fontfile=${font}:text='${cap}':fontsize=36:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=10,fade=t=in:st=${
+      } -filter_complex "[1:v][0:v]overlay=0:${capH},drawtext=fontfile='${font}':text='${cap}':fontsize=36:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=10,fade=t=in:st=${
         i * 0.2
       }:d=0.5:alpha=1,format=yuva420p" -t 7 -pix_fmt yuv420p -c:v libx264 "${fadePath}"`;
-      await execAsync(cmd);
+      await execAsync(cmd, { maxBuffer: 1024 * 1024 * 10 });
       fadeIns.push(fadePath);
     }
 
     // Gabungkan 4 fade-in ke grid 2x2
     // Posisi: 0,0 | 1,0 | 0,1 | 1,1
     // X: gridStartX + (col * (imgW+marginX)), Y: gridStartY + (row * (imgH+marginY))
+    const gridTitle = escapeFfmpegText(title);
     const filterGrid = `
       [0:v][1:v]overlay=${gridStartX}:${gridStartY}[tmp1];
       [tmp1][2:v]overlay=${gridStartX + imgW + marginX}:${gridStartY}[tmp2];
@@ -125,10 +135,7 @@ export async function POST(request: NextRequest) {
       [tmp3][4:v]overlay=${gridStartX + imgW + marginX}:${
       gridStartY + imgH + marginY
     }[withgrid];
-      [withgrid]drawtext=fontfile=${font}:text='${title.replace(
-      /'/g,
-      "\\'"
-    )}':fontsize=60:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=80[final]
+      [withgrid]drawtext=fontfile='${font}':text='${gridTitle}':fontsize=60:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=80[final]
     `.replace(/\n/g, "");
 
     // Buat video grid
@@ -139,13 +146,13 @@ export async function POST(request: NextRequest) {
     }" -i "${fadeIns[2]}" -i "${
       fadeIns[3]
     }" -filter_complex "${filterGrid}" -map "[final]" -t 7 -r 30 -pix_fmt yuv420p -c:v libx264 "${tempDir}/video.mp4"`;
-    await execAsync(gridCmd);
+    await execAsync(gridCmd, { maxBuffer: 1024 * 1024 * 10 });
 
     // Add audio
     const finalCmd = `"${
       process.env.FFMPEG_PATH || "ffmpeg"
     }" -y -i "${tempDir}/video.mp4" -i "${audioPath}" -c:v copy -c:a aac -shortest "${outputPath}"`;
-    await execAsync(finalCmd);
+    await execAsync(finalCmd, { maxBuffer: 1024 * 1024 * 10 });
 
     await fs.rm(tempDir, { recursive: true, force: true });
 
