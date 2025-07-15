@@ -94,15 +94,26 @@ export async function POST(request: NextRequest) {
     const audioPath = path.join(tempDir, `audio.mp3`);
     await fs.writeFile(audioPath, Buffer.from(audioBuf));
 
-    // Layout constants
+    // Layout constants - disesuaikan untuk text wrapping
     const gridW = 1000,
       gridH = 1000;
     const imgW = 460,
       imgH = 460; // margin antar gambar 40px
     const marginX = 40,
       marginY = 100; // marginY diperbesar dari 40 ke 100
-    const gridStartX = 40,
-      gridStartY = 200;
+    const gridStartX = 40;
+
+    // Dinamis gridStartY berdasarkan panjang title
+    // Estimasi tinggi title berdasarkan panjang karakter
+    const titleMaxWidth = 1000; // max width untuk title
+    const titleFontSize = 60;
+    const estimatedCharsPerLine = Math.floor(
+      titleMaxWidth / (titleFontSize * 0.6)
+    ); // estimasi karakter per baris
+    const estimatedLines = Math.ceil(title.length / estimatedCharsPerLine);
+    const titleHeight = estimatedLines * (titleFontSize + 10); // tinggi title + line spacing
+    const gridStartY = 40 + titleHeight + 40; // margin atas + tinggi title + margin bawah
+
     const capH = 60;
 
     // Get system font (no path issues)
@@ -128,6 +139,8 @@ export async function POST(request: NextRequest) {
     // Posisi: 0,0 | 1,0 | 0,1 | 1,1
     // X: gridStartX + (col * (imgW+marginX)), Y: gridStartY + (row * (imgH+marginY))
     const gridTitle = escapeFfmpegText(title);
+
+    // Text wrapping untuk title dengan max width
     const filterGrid = `
       [0:v][1:v]overlay=${gridStartX}:${gridStartY}[tmp1];
       [tmp1][2:v]overlay=${gridStartX + imgW + marginX}:${gridStartY}[tmp2];
@@ -135,15 +148,20 @@ export async function POST(request: NextRequest) {
       [tmp3][4:v]overlay=${gridStartX + imgW + marginX}:${
       gridStartY + imgH + marginY
     }[withgrid];
-      [withgrid]drawtext=fontfile='${font}':text='${gridTitle}':fontsize=60:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=80[final]
+      [withgrid]drawtext=fontfile='${font}':text='${gridTitle}':fontsize=60:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=40:text_w_max=${titleMaxWidth}[final]
     `.replace(/\n/g, "");
 
-    // Buat video grid
+    // Buat video grid dengan tinggi yang disesuaikan
+    const videoHeight = Math.max(
+      1920,
+      gridStartY + 2 * imgH + 2 * marginY + 100
+    ); // minimal 1920 atau sesuai konten
+
     const gridCmd = `"${
       process.env.FFMPEG_PATH || "ffmpeg"
-    }" -y -f lavfi -i color=white:s=1080x1920:d=7 -i "${fadeIns[0]}" -i "${
-      fadeIns[1]
-    }" -i "${fadeIns[2]}" -i "${
+    }" -y -f lavfi -i color=white:s=1080x${videoHeight}:d=7 -i "${
+      fadeIns[0]
+    }" -i "${fadeIns[1]}" -i "${fadeIns[2]}" -i "${
       fadeIns[3]
     }" -filter_complex "${filterGrid}" -map "[final]" -t 7 -r 30 -pix_fmt yuv420p -c:v libx264 "${tempDir}/video.mp4"`;
     await execAsync(gridCmd, { maxBuffer: 1024 * 1024 * 10 });
