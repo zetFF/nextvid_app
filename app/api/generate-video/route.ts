@@ -16,6 +16,23 @@ function escapeFfmpegText(text: string) {
     .replace(/"/g, '\\"');
 }
 
+// Fungsi untuk membungkus text menjadi beberapa baris (untuk ffmpeg drawtext)
+function wrapText(text: string, maxLen: number) {
+  const words = text.split(" ");
+  let lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if ((current + " " + word).trim().length > maxLen) {
+      lines.push(current.trim());
+      current = word;
+    } else {
+      current += " " + word;
+    }
+  }
+  if (current) lines.push(current.trim());
+  return lines.join("\\n");
+}
+
 // Fungsi untuk path font sesuai OS (Armbian/Linux pakai DejaVuSans.ttf)
 function getSystemFontPath() {
   const platform = process.platform;
@@ -153,12 +170,13 @@ export async function POST(request: NextRequest) {
     const fadeIns: string[] = [];
     for (let i = 0; i < 4; i++) {
       const fadePath = path.join(tempDir, `fade${i + 1}.mp4`);
-      const cap = escapeFfmpegText(captions[i]);
+      const capWrapped = wrapText(captions[i], 22); // 22 karakter per baris
+      const cap = escapeFfmpegText(capWrapped);
       const cmd = `"${process.env.FFMPEG_PATH || "ffmpeg"}" -y -loop 1 -i "${
         imagePaths[i]
       }" -f lavfi -t 7 -i color=white:s=${imgW}x${
         imgH + capH
-      } -filter_complex "[1:v][0:v]overlay=0:${capH},drawtext=fontfile='${font}':text='${cap}':fontsize=36:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-${captionMaxWidth})/2:y=10:box=1:boxcolor=white@0.0:boxborderw=10:max_glyphs=40,fade=t=in:st=${
+      } -filter_complex "[1:v][0:v]overlay=0:${capH},drawtext=fontfile='${font}':text='${cap}':fontsize=36:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-${captionMaxWidth})/2:y=10:box=1:boxcolor=white@0.0:boxborderw=10,fade=t=in:st=${
         i * 0.2
       }:d=0.5:alpha=1,format=yuva420p" -t 7 -pix_fmt yuv420p -c:v libx264 "${fadePath}"`;
       await execAsync(cmd, { maxBuffer: 1024 * 1024 * 10 });
@@ -168,7 +186,8 @@ export async function POST(request: NextRequest) {
     // Gabungkan 4 fade-in ke grid 2x2
     // Posisi: 0,0 | 1,0 | 0,1 | 1,1
     // X: gridStartX + (col * (imgW+marginX)), Y: gridStartY + (row * (imgH+marginY))
-    const gridTitle = escapeFfmpegText(title);
+    const gridTitleWrapped = wrapText(title, 32); // 32 karakter per baris
+    const gridTitle = escapeFfmpegText(gridTitleWrapped);
     const filterGrid = `
       [0:v][1:v]overlay=${gridStartX}:${gridStartY}[tmp1];
       [tmp1][2:v]overlay=${gridStartX + imgW + marginX}:${gridStartY}[tmp2];
@@ -176,7 +195,7 @@ export async function POST(request: NextRequest) {
       [tmp3][4:v]overlay=${gridStartX + imgW + marginX}:${
       gridStartY + imgH + marginY
     }[withgrid];
-      [withgrid]drawtext=fontfile='${font}':text='${gridTitle}':fontsize=60:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-${titleMaxWidth})/2:y=80:box=1:boxcolor=white@0.0:boxborderw=20:max_glyphs=60[final]
+      [withgrid]drawtext=fontfile='${font}':text='${gridTitle}':fontsize=60:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-${titleMaxWidth})/2:y=80:box=1:boxcolor=white@0.0:boxborderw=20[final]
     `.replace(/\n/g, "");
 
     // Buat video grid
