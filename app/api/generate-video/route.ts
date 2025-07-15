@@ -101,18 +101,9 @@ export async function POST(request: NextRequest) {
       imgH = 460; // margin antar gambar 40px
     const marginX = 40,
       marginY = 100; // marginY diperbesar dari 40 ke 100
+    const gridStartX = 40,
+      gridStartY = 200;
     const capH = 60;
-
-    // Estimasi jumlah baris judul (anggap 1 baris = 20 karakter, font besar)
-    const maxCharsPerLine = 20;
-    const titleLines = Math.ceil(title.length / maxCharsPerLine);
-    const titleFontSize = 60;
-    const titleLineHeight = 70; // px, sedikit lebih besar dari fontSize
-    const titleBoxPadding = 20; // px, padding atas bawah box judul
-    const titleBoxHeight = titleLines * titleLineHeight + 2 * titleBoxPadding;
-    const gridStartX = 40;
-    // gridStartY di bawah judul
-    const gridStartY = 40 + titleBoxHeight + 20; // 40px margin atas, 20px jarak bawah judul ke grid
 
     // Get system font (no path issues)
     const font = getSystemFontPath();
@@ -144,7 +135,7 @@ export async function POST(request: NextRequest) {
       [tmp3][4:v]overlay=${gridStartX + imgW + marginX}:${
       gridStartY + imgH + marginY
     }[withgrid];
-      [withgrid]drawtext=fontfile='${font}':text='${gridTitle}':fontsize=${titleFontSize}:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=40:box=1:boxcolor=white@0.8:boxborderw=20:wrap=1:max_glyphs=${maxCharsPerLine}[final]
+      [withgrid]drawtext=fontfile='${font}':text='${gridTitle}':fontsize=60:fontcolor=black:shadowcolor=gray:shadowx=1:shadowy=1:x=(w-text_w)/2:y=80[final]
     `.replace(/\n/g, "");
 
     // Buat video grid
