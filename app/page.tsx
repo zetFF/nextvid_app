@@ -44,17 +44,17 @@ export default function Page() {
   }
  };
 
- const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, idx?: number, key?: "captions" | "imageUrls") => {
-  const { name, value } = e.target;
-  if (typeof idx === "number" && key) {
-   setFormData((prev) => ({
-    ...prev,
-    [key]: prev[key].map((item, i) => (i === idx ? value : item)),
-   }));
-  } else {
-   setFormData((prev) => ({ ...prev, [name]: value }));
-  }
- };
+//  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, idx?: number, key?: "captions" | "imageUrls") => {
+//   const { name, value } = e.target;
+//   if (typeof idx === "number" && key) {
+//    setFormData((prev) => ({
+//     ...prev,
+//     [key]: prev[key].map((item, i) => (i === idx ? value : item)),
+//    }));
+//   } else {
+//    setFormData((prev) => ({ ...prev, [name]: value }));
+//   }
+//  };
 
  return (
   <div className="relative min-h-screen bg-[#101012] text-white overflow-clip">

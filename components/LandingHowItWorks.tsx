@@ -2,7 +2,7 @@ export function HowItWorks() {
  return (
   <section id="how" className="relative py-20 md:py-28 tracking-tight">
    <div className="mx-auto max-w-5xl px-6">
-    <h2 className="text-center text-3xl Bron md:text-4xl font-semibold">Simple to use</h2>
+    <h2 className="text-center text-3xl Bron md:text-4xl font-medium">Simple to use</h2>
     <ol className="mt-10 grid md:grid-cols-3 gap-6">
      <StepCard step={1} title="Input" desc="Enter the title, music link, captions, and 4 images." />
      <StepCard step={2} title="Generate" desc="AI automatically arranges order, transitions, and timing." />

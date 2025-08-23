@@ -4,8 +4,9 @@ export function Pricing() {
  return (
   <section id="pricing" className="relative py-20 md:py-10 tracking-tight">
    <div className="mx-auto max-w-5xl px-6">
-    <h2 className="text-center text-3xl md:text-4xl Bron tracking-tight font-semibold">Fair Pricing</h2>
-    <div className="mt-10 grid md:grid-cols-3 Ingl gap-6">
+    <h2 className="text-center text-3xl md:text-4xl Bron tracking-tight font-medium max-w-lg mx-auto">the most relevant and affordable price</h2>
+    <p className="text-center text-sm Ingl tracking-tight mt-5 text-neutral-200 max-w-2xl mx-auto">Select the plan that best fits your needs</p>
+    <div className="mt-10 grid md:grid-cols-3 Ingl gap-6 items-stretch">
      <PricingCard
       name="Free"
       price="$0"
@@ -50,9 +51,13 @@ export function PricingCard({
  highlight?: boolean;
 }) {
  return (
-  <div className={`relative rounded-3xl border ${highlight ? "border-fuchsia-400/50" : "border-white/10"} bg-white/[0.03] p-6 shadow-xl`}>
+  <div
+   className={`relative rounded-3xl border ${
+    highlight ? "border-yellow-400/50" : "border-white/10"
+   } bg-white/[0.03] p-6 shadow-xl flex flex-col h-full`}
+  >
    {highlight && (
-    <div className="absolute -top-3 left-6 text-white rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400 px-3 py-1 text-xs font-medium text-black">
+    <div className="absolute -top-3 left-6 text-white rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 px-3 py-1 text-xs font-medium text-black">
      Most Popular
     </div>
    )}
@@ -62,7 +67,7 @@ export function PricingCard({
     {price}
     <span className="text-base font-normal text-white/60">/month</span>
    </div>
-   <ul className="mt-4 space-y-2">
+   <ul className="mt-4 space-y-2 flex-1">
     {features.map((f) => (
      <li key={f} className="flex items-center gap-2 text-sm text-white/80">
       <CheckCircle2 className="h-4 w-4" /> {f}
@@ -72,7 +77,7 @@ export function PricingCard({
    <a
     href="#generator"
     className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2 font-medium ${
-     highlight ? "bg-gradient-to-r from-fuchsia-500 via-indigo-500 to-cyan-400 text-black" : "bg-white text-black"
+     highlight ? "bg-gradient-to-r from-yellow-500 via-yellow-500 to-orange-500 text-black" : "bg-white text-black"
     }`}
    >
     <div className="text-sm">{cta}</div>
