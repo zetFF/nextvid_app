@@ -54,7 +54,7 @@ export function Hero() {
      <span className="inline-flex Ingl mt-48 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80">
       <Sparkles className="h-3.5 w-3.5" /> AI Video Generator
      </span>
-     <h1 className="mt-6 relative Bron text-4xl md:text-7xl text-white font-medium tracking-tight leading-tighter">
+     <h1 className="mt-6 relative Bron text-3xl md:text-7xl text-white font-medium tracking-tight leading-tighter">
       Turn images & text into{" "}
       <span
        className="bg-gradient-to-r from-yellow-400 via-yellow-400 to-orange-400 bg-clip-text text-transparent inline-block"
